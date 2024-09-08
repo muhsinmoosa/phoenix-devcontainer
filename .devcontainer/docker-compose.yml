@@ -1,0 +1,49 @@
+version: '3.7'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/app
+    ports:
+      - "4000:4000"
+    depends_on:
+      - pgsql
+    networks:
+      - network-name
+  pgsql:
+    image: 'postgres:15'
+    ports:
+      - '${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+      PGPASSWORD: '${DB_PASSWORD:-secret}'
+      POSTGRES_DB: '${DB_DATABASE}'
+      POSTGRES_USER: '${DB_USERNAME}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+    volumes:
+      - 'pgsql-storage:/var/lib/postgresql/data'
+    networks:
+      - network-name
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}" ]
+      retries: 3
+      timeout: 5s
+  pgadmin:
+    image: 'dpage/pgadmin4:8.4'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: '${PGADMIN_DEFAULT_EMAIL}'
+      PGADMIN_DEFAULT_PASSWORD: '${PGADMIN_DEFAULT_PASSWORD}'
+    ports:
+      - "4001:80"
+    depends_on:
+      - pgsql
+    networks:
+      - network-name
+
+volumes:
+  pgsql-storage:
+    driver: local
+networks:
+  network-name:
+    driver: bridge
